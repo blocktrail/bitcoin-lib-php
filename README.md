@@ -11,7 +11,7 @@ such as createrawtransaction/signrawtransaction/decoderawtransaction. As such,
 such, use of bitcoin RPC functionality can be kept to a minimum.
 
 Libraries
-===
+---------
 - Raw Transactions: create, sign, validate, with support for P2SH. 
 - Create multi-signature addresses, create redeeming transactions. 
 - BIP32: Functions for generating BIP32 deterministic keys.
@@ -43,3 +43,8 @@ Installing via Composer (recommended)
 
     php composer.phar install
 
+Contributing
+------------
+Please make sure that all phpunit tests pass (and preferably added new unit tests) and that the coding style passing PSR2 checks:
+ - `./vendor/bin/phpunit`
+ - `./vendor/bin/phpcs --standard=./phpcs.xml -n -s ./src/`
