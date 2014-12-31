@@ -1,9 +1,13 @@
 {
-    "name": "bitwasp/bitcoin-lib",
-    "description": "Implementation of raw transactions in bitcoin, HD wallets, Electrum wallets, and other fun stuff.",
+    "name": "blocktrail/bitcoin-lib",
+    "description": "Fork of bitwasp/bitcoin-lib to be able to publish and use unmerged pull requests.",
     "keywords": ["bitcoin", "php", "bip32", "electrum", "ecc", "transactions", "HD wallet","btc", "cryptocurrency"],
     "license": "Unlicense",
     "authors": [
+        {
+            "name": "Ruben de Vries",
+            "email": "ruben@blocktrail.com"
+        },
         {
             "name": "Thomas Kerin",
             "email": "thomas.kerin@gmail.com"
