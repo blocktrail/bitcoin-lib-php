@@ -1208,29 +1208,35 @@ class RawTransaction
      */
     public static function encode_signature(Signature $signature)
     {
-
         // Pad r and s to 64 characters.
-        $rh = str_pad(BitcoinLib::hex_encode($signature->getR()), 64, '0', STR_PAD_LEFT);
-        $sh = str_pad(BitcoinLib::hex_encode($signature->getS()), 64, '0', STR_PAD_LEFT);
+        $rBin = pack("H*", BitcoinLib::hex_encode($signature->getR()));
+        $sBin = pack("H*", BitcoinLib::hex_encode($signature->getS()));
 
-        // Check if the first byte of each has its highest bit set,
-        $t1 = unpack("H*", (pack('H*', substr($rh, 0, 2)) & pack('H*', '80')));
-        $t2 = unpack("H*", (pack('H*', substr($sh, 0, 2)) & pack('H*', '80')));
-        // if so, the result != 00, and must be padded.
-        $r = ($t1[1] !== '00') ? '00' . $rh : $rh;
-        $s = ($t2[1] !== '00') ? '00' . $sh : $sh;
+        // Pad R and S if their highest bit is flipped, ie,
+        // they are negative.
+        $rt = $rBin[0] & pack('H*', '80');
+        if (ord($rt) == 128) {
+            $rBin = pack('H*', '00') . $rBin;
+        }
 
-        // Create the signature.
-        $der_sig = '30'
-            . self::_dec_to_bytes((4 + ((strlen($r) + strlen($s)) / 2)), 1) //((strlen($r)+strlen($s)+16)/2),1)
-            . '02'
-            . self::_dec_to_bytes(strlen($r) / 2, 1)
-            . $r
-            . '02'
-            . self::_dec_to_bytes(strlen($s) / 2, 1)
-            . $s
-            . '01';
+        $st = $sBin[0] & pack('H*', '80');
+        if (ord($st) == 128) {
+            $sBin = pack('H*', '00') . $sBin;
+        }
 
+        $inner = hex2bin('02')
+            .hex2bin(dechex(strlen($rBin)))
+            .$rBin
+            .hex2bin('02')
+            .hex2bin(dechex(strlen($sBin)))
+            .$sBin;
+
+        $outer = hex2bin('30')
+            .hex2bin(dechex(strlen($inner)))
+            .$inner
+            .hex2bin('01');
+
+        $der_sig = bin2hex($outer);
         return $der_sig;
     }
 
@@ -1325,118 +1331,115 @@ class RawTransaction
      */
     public static function is_canonical_signature($signature)
     {
-        $math = \Mdanter\Ecc\EccFactory::getAdapter();
 
-        $loud = false;
+        $loud   = false;
+        $signature = pack("H*", $signature);
         $length = strlen($signature);
-        if ($math->cmp($length, 18) < 0) {
+
+        if ($length < 9) {
             if ($loud == true) {
                 echo "Non-canonical signature: too short\n";
             }
             return false;
         }
 
-        if ($math->cmp($length, 146) > 0) {
+        if ($length > 73) {
             if ($loud == true) {
                 echo "Non-canonical signature: too long\n";
             }
             return false;
         }
 
-        // Non-canonical signature: too long
-        if (substr($signature, 0, 2) !== '30') {
+        if (ord($signature[0]) !== 0x30) {
             if ($loud == true) {
-                echo "Non-canonical signature: wrong type\n";
+                echo 'Signature has wrong type\n';
             }
             return false;
         }
 
-        if (substr($signature, 2, 2) !== $math->decHex((strlen($signature) / 2) - 3)) {
+        if (ord($signature[1]) !== $length - 3) {
             if ($loud == true) {
                 echo "Non-canonical signature: wrong length marker\n";
             }
             return false;
         }
 
-        $len_r_bytes = $math->hexDec(substr($signature, 6, 2));
-        $r = substr($signature, 8, $len_r_bytes * 2);
-        $r_first = substr($r, 0, 2);
-
-        $len_s_bytes = $math->hexDec(substr($signature, (5 + $len_r_bytes) * 2, 2));
-        $s = substr($signature, (8 + ($len_r_bytes * 2) + 4), $len_s_bytes * 2);
-        $s_first = substr($s, 0, 2);
-
-        if ((5 + $len_r_bytes) >= $length) {
+        $lenR   = ord($signature[3]);
+        $r      = substr($signature, 4, $lenR);
+        if (5 + $lenR >= $length) {
             if ($loud == true) {
                 echo "Non-canonical signature: S length misplaced\n";
             }
             return false;
         }
 
-        if (($len_r_bytes + $len_s_bytes + 7) * 2 !== $length) {
+        $lenS   = ord($signature[5 + $lenR]);
+        $startS = 4 + $lenR + 2;
+        $s      = substr($signature, $startS, $lenS);
+        if (($lenR + $lenS + 7) !== $length) {
             if ($loud == true) {
                 echo "Non-canonical signature: R+S length mismatched\n";
             }
             return false;
         }
 
-        // This is the length of r: number of bytes, in hex.
-
-        if (substr($signature, 4, 2) !== '02') {
+        if (ord(substr($signature, 2, 1)) !== 0x02) {
             if ($loud == true) {
                 echo "Non-canonical signature: R value type mismatch\n";
             }
             return false;
         }
 
-        if ($len_r_bytes == 0) {
+        if ($lenR == 0) {
             if ($loud == true) {
                 echo "Non-canonical signature: R length is zero\n";
             }
             return false;
         }
 
-        $r_and = unpack("H*", (pack('H*', $r_first) & pack('H*', '80')));
-        if ($r_and[1] == '80') {
+        $rAnd   = $r[0] & pack('H*', '80');
+        if (ord($rAnd) == 128) {
             if ($loud == true) {
                 echo "Non-canonical signature: R value negative\n";
             }
             return false;
         }
 
-        /*$r1_and = unpack( "H*", (pack('H*',substr($r, 0, 2)) & pack('H*', '80')));
-        if($r_first == '00' && !($r1_and[1] == '80')) {
-            if($loud == true) echo "Non-canonical signature: R value excessively padded\n";
+        if ($lenR > 1 && ord($r[0]) == 0x00 && !ord(($r[1] & pack('H*', '80')))) {
+            if ($loud == true) {
+                echo "Non-canonical signature: R value excessively padded\n";
+            }
             return false;
-        }*/
+        }
 
-        if (substr($signature, (4 + $len_r_bytes) * 2, 2) !== '02') {
+        if (ord(substr($signature, $startS - 2, 1)) !== 0x02) {
             if ($loud == true) {
                 echo "Non-canonical signature: S value type mismatch\n";
             }
             return false;
         }
 
-        if ($len_s_bytes == 0) {
+        if ($lenS == 0) {
             if ($loud == true) {
                 echo "Non-canonical signature: S length is zero\n";
             }
             return false;
         }
 
-        $s_and = unpack("H*", (pack('H*', $s_first) & pack('H*', '80')));
-        if ($s_and[1] == '80') {
+        $sAnd   = $s[0] & pack('H*', '80');
+        if (ord($sAnd) == 128) {
             if ($loud == true) {
                 echo "Non-canonical signature: S value negative\n";
             }
             return false;
         }
 
-        /*$s1_and = unpack( "H*", (pack('H*',substr($s, 0, 2)) & pack('H*', '80')));
-        if($s_first == '00' && !($s1_and[1] == '80')) {
-            if($loud == true) echo "Non-canonical signature: S value excessively padded\n";
+        if ($lenS > 1 && ord($s[0]) == 0x00 && !ord(($s[1] & pack("H*", '80'))) == 0x80) {
+            if ($loud == true) {
+                echo "Non-canonical signature: S value excessively padded\n";
+            }
             return false;
-        }*/
+        }
 
         return true;
 
