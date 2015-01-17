@@ -2,6 +2,7 @@
 
 use BitWasp\BitcoinLib\BitcoinLib;
 use BitWasp\BitcoinLib\RawTransaction as RawTransaction;
+use Mdanter\Ecc\EccFactory;
 
 require_once(__DIR__. '/../vendor/autoload.php');
 
@@ -315,6 +316,21 @@ class RawTransactionTest extends PHPUnit_Framework_TestCase
 
             $this->fail('Failed testing for case: '.$test[0]);
 
+        }
+    }
+
+    public function testSignAndIsCanonical()
+    {
+        $math = EccFactory::getAdapter();
+        $G = EccFactory::getSecgCurves()->generator256k1();
+        $private = $G->createPrivateKey();
+
+        for ($i = 0; $i < 100; $i++) {
+            $random = hash('sha256', 'random'.$i);
+            $sign = $private->sign($math->hexDec($random), $math->hexDec((string)bin2hex(mcrypt_create_iv(32, \MCRYPT_DEV_URANDOM))));
+            $this->assertInstanceOf('Mdanter\Ecc\Signature', $sign);
+            $sig = RawTransaction::encode_signature($sign);
+            $this->assertTrue(RawTransaction::is_canonical_signature($sig));
         }
     }
 
