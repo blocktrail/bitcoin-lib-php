@@ -7,8 +7,12 @@ php:
   - hhvm
 
 install:
- - "composer update"
+  - "composer update"
 
 script:
- - ./vendor/bin/phpunit -c ./build/
- - ./vendor/bin/phpcs --standard=./build/phpcs.xml -n -a ./src/
+  - ./vendor/bin/phpunit -c ./build/
+  - ./vendor/bin/phpcs --standard=./build/phpcs.xml -n -a ./src/
+
+matrix:
+  allow_failures:
+     - php: hhvm
