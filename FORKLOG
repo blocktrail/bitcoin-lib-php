@@ -1,0 +1,6 @@
+keeping track of what we've merged on top of bitwasp/master
+ - git merge bip32-tweaks
+ - git merge bip32-max-length
+ - git merge sign-tx-extra-test
+ - git merge float-rounding
+ - git merge bitwasp/fixCheckCanonicalSignature
