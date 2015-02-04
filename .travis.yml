@@ -9,11 +9,15 @@ php:
   - hhvm
 
 install:
- - "composer update"
+  - "composer update"
 
 script:
  - ./vendor/bin/phpunit ./tests
  - ./vendor/bin/phpcs --standard=./build/phpcs.xml -n -a ./src/
+
+matrix:
+  allow_failures:
+     - php: hhvm
 
 notifications:
   webhooks:
