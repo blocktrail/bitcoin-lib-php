@@ -141,7 +141,7 @@ class Electrum
         $z = $math->hexDec(hash('sha256', hash('sha256', "$iteration:$change:" . pack('H*', $mpk), true)));
 
         // Add the Point defined by $x and $y, to the result of EC multiplication of $z by $gen
-        $pt = new Point($math, $curve, $x, $y, $gen->getOrder());
+        $pt = new Point($curve, $x, $y, $gen->getOrder(), $math);
         $pt = $pt->add($gen->mul($z));
 
         // Generate the uncompressed public key.
