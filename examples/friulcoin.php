@@ -44,7 +44,7 @@ $inputs = array(
 $sendTo = 'FUEtWp3zbU4RgWAVzTRNoes2d1hozsffsu';
 $sendAmount = BitcoinLib::toSatoshi(0.1);
 
-$changeAddress = BitcoinLib::private_key_to_address($keys[0]);
+$changeAddress = 'FP2rYTVc7N945cZNNvfGjUCxC8mLnNcoHM';
 $fee = BitcoinLib::toSatoshi(0.0001);
 
 // calculate total of input(s)
